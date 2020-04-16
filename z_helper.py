@@ -1,6 +1,4 @@
 import numpy as np
-import csv
-import random
 
 def import_from_csv(path, data_type):
     return  np.genfromtxt(path, dtype=data_type, delimiter=',') 
