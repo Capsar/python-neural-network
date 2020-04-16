@@ -1,9 +1,5 @@
 import numpy as np
-import functools
 import z_helper as h
-import csv
-import time
-import random
 
 class NeuralNetwork:
 
@@ -66,7 +62,7 @@ class NeuralNetwork:
 
 np.set_printoptions(linewidth=200)
 for i in range(5):
-    random_seed = random.randint(10, 1010)
+    random_seed = np.random.randint(10, 1010)
     np.random.seed(random_seed)
 
     data_input = h.import_from_csv("data/features.txt", float)
@@ -78,7 +74,6 @@ for i in range(5):
 
     nn = NeuralNetwork(layer_sizes=[10, 15, 7], layer_activations=["sigmoid", "sigmoid"])
 
-    # print("Beginning training")
     previous_mse = 1
     current_mse = 0
     epochs = 0
