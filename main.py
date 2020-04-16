@@ -5,11 +5,6 @@ import csv
 import time
 import random
 
-np.set_printoptions(linewidth=200)
-random_seed = random.randint(10, 1010)
-np.random.seed(random_seed)
-
-
 class NeuralNetwork:
 
     def __init__(self, layer_sizes, layer_activations, learning_rate=0.1, low=-2, high=2):
@@ -62,39 +57,41 @@ class NeuralNetwork:
         desired_output_data = np.array(desired_output_data).reshape(-1, 1)
         assert len(input_data) == self.layer_sizes[0]
         assert len(desired_output_data) == self.layer_sizes[-1]
-        #Error is difference between desired_output & actual output.
         return np.sum(np.power(desired_output_data - self.calculate_output(input_data), 2))
 
     def print_weights_and_biases(self):
         print(self.weights)
         print(self.biases)
 
-print("Random seed: " + str(random_seed))
 
-data_input = h.import_from_csv("data/features.txt", float)
-data_output = h.import_from_csv("data/targets.txt", int)
-data_output = np.array([h.class_to_array(np.amax(data_output), x) for x in data_output])
+np.set_printoptions(linewidth=200)
+for i in range(5):
+    random_seed = random.randint(10, 1010)
+    np.random.seed(random_seed)
 
-train_input, validate_input, test_input = h.kfold(4, data_input, random_seed)
-train_output, validate_output, test_output = h.kfold(4, data_output, random_seed)
+    data_input = h.import_from_csv("data/features.txt", float)
+    data_output = h.import_from_csv("data/targets.txt", int)
+    data_output = np.array([h.class_to_array(np.amax(data_output), x) for x in data_output])
 
-nn = NeuralNetwork(layer_sizes=[10, 15, 7], layer_activations=["sigmoid", "sigmoid"])
+    train_input, validate_input, test_input = h.kfold(4, data_input, random_seed)
+    train_output, validate_output, test_output = h.kfold(4, data_output, random_seed)
 
-print("Beginning training")
-previous_mse = 1
-current_mse = 0
-num_epochs = 0
-while(current_mse < previous_mse):
-    previous_mse = h.calculate_MSE(nn, validate_input, validate_output)
-    for i in range(len(train_input)):
-        nn.train(train_input[i], train_output[i])
-    current_mse = h.calculate_MSE(nn, validate_input, validate_output)
-    
-    num_epochs += 1
-    if num_epochs % 10 == 0: print("Epoch: " + str(num_epochs) + " MSE: " + str(current_mse))
+    nn = NeuralNetwork(layer_sizes=[10, 15, 7], layer_activations=["sigmoid", "sigmoid"])
+
+    # print("Beginning training")
+    previous_mse = 1
+    current_mse = 0
+    epochs = 0
+    while(current_mse < previous_mse):
+        previous_mse = h.calculate_MSE(nn, validate_input, validate_output)
+        for i in range(len(train_input)):
+            nn.train(train_input[i], train_output[i])
+        current_mse = h.calculate_MSE(nn, validate_input, validate_output)
+        
+        epochs += 1
+        # if epochs % 10 == 0: print("Epoch: " + str(epochs) + " MSE: " + str(current_mse))
 
 
-train_mse = h.calculate_MSE(nn, train_input, train_output)
-test_mse = h.calculate_MSE(nn, test_input, test_output)
-print("Results:")
-print("Tr: " + str(train_mse) + " V: " + str(current_mse) + " T: " + str(test_mse))
+    train_mse = h.calculate_MSE(nn, train_input, train_output)
+    test_mse = h.calculate_MSE(nn, test_input, test_output)
+    print("Random_Seed: "  + str(random_seed) + " Epochs: " + str(epochs) + " Tr: " + str(train_mse) + " V: " + str(current_mse) + " T: " + str(test_mse))
