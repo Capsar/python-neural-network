@@ -15,15 +15,7 @@ def kfold(k, data, seed=99):
     np.random.seed(seed)
     data = np.random.permutation(data)
     fold_size = int(len(data) / k)
-    return data[:fold_size], data[fold_size:fold_size*2], data[fold_size*2:]
-
-
-def calculate_MSE(nn, input_data, output_data):
-    size = len(input_data)
-    sum_error = 0
-    for i in range(size):
-        sum_error += nn.calculate_SSE(input_data[i], output_data[i])
-    return sum_error / size
+    return data[fold_size*2:], data[:fold_size], data[fold_size:fold_size*2]
 
 
 def random_np(low, high, size):
