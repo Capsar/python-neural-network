@@ -1,4 +1,5 @@
 import numpy as np
+from numba import njit
 
 
 def import_from_csv(path, data_type):
@@ -15,22 +16,10 @@ def kfold(k, data, seed=99):
     np.random.seed(seed)
     data = np.random.permutation(data)
     fold_size = int(len(data) / k)
-    return data[:fold_size], data[fold_size:fold_size*2], data[fold_size*2:]
+    return data[fold_size*2:], data[:fold_size], data[fold_size:fold_size*2]
 
 
-def calculate_MSE(nn, input_data, output_data):
-    size = len(input_data)
-    sum_error = 0
-    for i in range(size):
-        sum_error += nn.calculate_SSE(input_data[i], output_data[i])
-    return sum_error / size
-
-
-def random_np(low, high, size):
-    assert low <= high
-    return np.random.random(size)*(high-low) + low
-
-
+@njit
 def sigmoid(x, derivative):
     if derivative:
         return x * (1.0 - x)
@@ -38,6 +27,7 @@ def sigmoid(x, derivative):
         return 1.0 / (1.0 + np.exp(-x))
 
 
+@njit
 def relu(x, derivative):
     if derivative:
         x[x <= 0] = 0
