@@ -5,7 +5,7 @@ import z_helper as h
 import time
 
 
-def make_neural_network(layer_sizes, layer_activations, learning_rate=0.2, low=-2, high=2):
+def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=-2, high=2):
 
     # Initialize typed layer sizes list.
     typed_layer_sizes = typed.List()
@@ -118,6 +118,18 @@ class NeuralNetwork:
             current_mse = self.calculate_MSE(validate_input_data, validate_output_data)
         return epochs, current_mse
 
+    def evaluate(self, input_data, desired_output_data):
+        corrects, wrongs = 0, 0
+        for i in range(len(input_data)):
+            output = self.calculate_output(input_data[i])
+            output_max = output.argmax()
+            desired_output_max = desired_output_data[i].argmax()
+            if output_max == desired_output_max:
+                corrects += 1
+            else:
+                wrongs += 1
+        return corrects / (corrects + wrongs) 
+
     def print_weights_and_biases(self):
         print(self.weights)
         print(self.biases)
@@ -135,7 +147,7 @@ compile_nn.train(data_input[:1], data_output[:1], data_input[1: 2], data_output[
 end_time = time.time_ns()
 print("Compile time:", (end_time-begin_time) / 1e9)
 
-for i in range(3):
+for i in range(10):
 
     random_seed = np.random.randint(10, 1010)
     np.random.seed(random_seed)
@@ -151,4 +163,6 @@ for i in range(3):
 
     train_mse = nn.calculate_MSE(train_input, train_output)
     test_mse = nn.calculate_MSE(test_input, test_output)
-    print("Seed:", random_seed, "Epochs:", epochs, "Time:", (end_time-begin_time)/1e9, "Tr:", train_mse, "V:", current_mse, "T:", test_mse)
+
+    accuracy_test = nn.evaluate(test_input, test_output)
+    print("Seed:", random_seed, "Epochs:", epochs, "Time:", (end_time-begin_time)/1e9, "Accuracy:", accuracy_test, "Tr:", train_mse, "V:", current_mse, "T:", test_mse)
