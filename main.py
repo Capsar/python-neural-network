@@ -10,20 +10,24 @@ class NeuralNetwork:
         assert len(layer_sizes)-1 == len(layer_activations)
 
         # Initialize weights between every neuron in all adjacent layers.
-        self.weights = []
+        self.weights = typed.List()
         for i in range(1, len(layer_sizes)):
             self.weights.append(np.random.uniform(low, high, (layer_sizes[i-1], layer_sizes[i])))
         # Initialize biases for every neuron in all layers
 
-        self.biases = []
+        self.biases = typed.List()
         for i in range(1, len(layer_sizes)):
             self.biases.append(np.random.uniform(low, high, (layer_sizes[i], 1)))
         # Initialize empty list of output of every neuron in all layers.
-        self.layer_outputs = []
+        self.layer_outputs = typed.List()
         for i in range(len(layer_sizes)):
             self.layer_outputs.append(np.zeros((layer_sizes[i], 1)))
 
-        self.layer_activations = layer_activations
+        # Initialize list with activation functions per layer.
+        self.layer_activations = typed.List()
+        for f in layer_activations:
+            self.layer_activations.append(f)
+
         self.layer_sizes = layer_sizes
         self.learning_rate = learning_rate
 
