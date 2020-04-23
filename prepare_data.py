@@ -34,4 +34,4 @@ def prepare_ci_data():
     np.save("data/ci_inputs", data_input)
     np.save("data/ci_outputs", data_output)
 
-prepare_ci_data()
+prepare_mnist_data()

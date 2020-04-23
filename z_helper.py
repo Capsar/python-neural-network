@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit, types, typed
 
+
 def import_from_csv(path, data_type):
     return np.genfromtxt(path, dtype=data_type, delimiter=',')
 
@@ -20,11 +21,11 @@ def kfold(k, data, seed=99):
 
 @njit
 def activation(x, ftype, derivative):
-    if ftype == "sigmoid":
-        if derivative:
-            return x * (1.0 - x)
-        else:
-            return 1.0 / (1.0 + np.exp(-x))
+    if derivative:
+        return x * (1.0 - x)
+    else:
+        return 1.0 / (1.0 + np.exp(-x))
+
 
 @njit
 def relu(x, derivative):
@@ -36,5 +37,4 @@ def relu(x, derivative):
 
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x))
-
 

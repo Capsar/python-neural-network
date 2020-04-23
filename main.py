@@ -146,8 +146,11 @@ compile_nn = make_neural_network(layer_sizes=[data_input.shape[1], data_output.s
 compile_nn.train(data_input[:1], data_output[:1], data_input[1: 2], data_output[1: 2])
 end_time = time.time_ns()
 print("Compile time:", (end_time-begin_time) / 1e9)
+np.random.seed(420)
 
-for i in range(10):
+total_time = 0.0
+n = 10
+for i in range(n):
 
     random_seed = np.random.randint(10, 1010)
     np.random.seed(random_seed)
@@ -165,4 +168,7 @@ for i in range(10):
     test_mse = nn.calculate_MSE(test_input, test_output)
 
     accuracy_test = nn.evaluate(test_input, test_output)
+    total_time += (end_time-begin_time)/1e9
+
     print("Seed:", random_seed, "Epochs:", epochs, "Time:", (end_time-begin_time)/1e9, "Accuracy:", accuracy_test, "Tr:", train_mse, "V:", current_mse, "T:", test_mse)
+print("Average:", total_time / n)
