@@ -13,6 +13,7 @@ data_output = np.load("data/ci_outputs.npy")
 print("Begin compiling!")
 begin_time = time.time_ns()
 compiled_nn_values = nn.make_neural_network(layer_sizes=[data_input.shape[1], data_output.shape[1]], layer_activations=["sigmoid"])
+# nn.train_batch(data_input[:8], data_output[:8], compiled_nn_values)
 nn.train_auto(1, data_input[:1], data_output[:1], data_input[1: 2], data_output[1: 2], compiled_nn_values)
 end_time = time.time_ns()
 print("Compile time:", (end_time-begin_time) / 1e9)
@@ -36,9 +37,9 @@ for i in range(n):
     #     # nn.train_single(validate_input[ii], validate_output[ii], nn_values)
     # end_time = time.time_ns()
     # print("Average 1:", ((end_time-begin_time)/1e9) / n2)
-
+    
     begin_time = time.time_ns()
-    epochs, current_mse = nn.train_auto(1, train_input, train_output, validate_input, validate_output, nn_values)
+    epochs, current_mse = nn.train_auto(4, train_input, train_output, validate_input, validate_output, nn_values)
     end_time = time.time_ns()
 
     train_mse = nn.calculate_MSE(train_input, train_output, nn_values)
