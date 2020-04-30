@@ -1,22 +1,8 @@
 import numpy as np
-import cupy as cp
-from numba.experimental import jitclass
+# import cupy as cp
 from numba import njit, types, typed, prange
 import z_helper as h
 import time
-
-
-spec = [
-    ("weights", types.ListType(types.float64[:, ::1])),
-    ("biases", types.ListType(types.float64[:, ::1])),
-    ("layer_outputs", types.ListType(types.float64[:, ::1])),
-]
-@jitclass(spec)
-class NeuralNetwork:
-    def __init__(self, weights, biases, layer_outputs):
-        self.weights = weights
-        self.biases = biases
-        self.layer_outputs = layer_outputs
 
 
 def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=-2, high=2):
@@ -97,21 +83,6 @@ def train_single(input_data, desired_output_data, nn):
         nn[3][i] += nn[5] * error
     return nn
 
-@njit
-def train_batch(input_data, desired_output_data, nn):
-    new_nns = typed.List()
-    length_input_data = len(input_data)
-    for i in range(length_input_data):
-        new_nns.append(train_single(input_data[i], desired_output_data[i], tuple(np.copy(nn))))
-    
-    for new_nn in new_nns:
-        nn[2] += new_nn[2]
-        nn[3] += new_nn[3]
-        nn[4] += new_nn[4]
-
-    nn[2] /= length_input_data+1
-    nn[3] /= length_input_data+1
-    nn[4] /= length_input_data+1
 
 @njit(parallel=True)
 def calculate_MSE(input_data, desired_output_data, nn):
@@ -135,22 +106,15 @@ def train_epoch(train_input_data, train_desired_output_data, validate_input_data
 
 
 @njit
-def train_auto(batch_size, train_input_data, train_desired_output_data, validate_input_data, validate_output_data, nn):
+def train_auto(train_input_data, train_desired_output_data, validate_input_data, validate_output_data, nn):
     previous_mse = 1.0
     current_mse = 0.0
     epochs = 0
-    length_train_data = len(train_input_data)
-    n_iterations = int(length_train_data / batch_size)
-
     while(current_mse < previous_mse):
         epochs += 1
         previous_mse = calculate_MSE(validate_input_data, validate_output_data, nn)
-        # train_batch(train_input_data, train_desired_output_data, nn)
         for i in range(len(train_input_data)):
             train_single(train_input_data[i], train_desired_output_data[i], nn)
-        # for i in range(n_iterations):
-        #     b, e = i*batch_size, i*batch_size+batch_size
-        #     train_batch(train_input_data[b:e], train_desired_output_data[b:e], nn)
         current_mse = calculate_MSE(validate_input_data, validate_output_data, nn)
     return epochs, current_mse
 
