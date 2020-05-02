@@ -29,9 +29,13 @@ def prepare_ci_data():
     data_output = h.import_from_csv("data/ci_targets.txt", int)
 
     data_output = np.array([h.class_to_array(np.amax(data_output), x) for x in data_output])
-    data_input = data_input.reshape((len(data_input), -1, 1))
-    data_output = data_output.reshape((len(data_output), -1, 1))
-    np.save("data/ci_inputs", data_input)
-    np.save("data/ci_outputs", data_output)
 
-prepare_mnist_data()
+    # print(data_input.shape)
+    # print(data_output.shape)
+
+    # data_input = data_input.reshape((len(data_input), -1, 1))
+    # data_output = data_output.reshape((len(data_output), -1, 1))
+    np.save("data/ci_2_inputs", data_input)
+    np.save("data/ci_2_outputs", data_output)
+
+prepare_ci_data()
