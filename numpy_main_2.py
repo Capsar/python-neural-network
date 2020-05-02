@@ -1,6 +1,6 @@
 import numpy as np
 import numpy_neural_network_2 as nn
-import z_helper as h
+import numpy_z_helper_2 as h
 import time
 np.set_printoptions(linewidth=200)
 
