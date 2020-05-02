@@ -1,11 +1,36 @@
 import numpy as np
-# import cupy as cp
+from numba.experimental import jitclass
 from numba import njit, types, typed, prange
 import z_helper as h
 import time
 
+from numba.core.errors import NumbaTypeSafetyWarning
+import warnings
+
+warnings.simplefilter('ignore', category=NumbaTypeSafetyWarning)
+
+spec = [
+    ("layer_sizes", types.ListType(types.int64)),
+    ("layer_activations", types.ListType(types.FunctionType(types.float64[:, ::1](types.float64[:, ::1], types.boolean)))),
+    ("weights", types.ListType(types.float64[:, ::1])),
+    ("biases", types.ListType(types.float64[:, ::1])),
+    ("layer_outputs", types.ListType(types.float64[:, ::1])),
+    ("learning_rate", types.float64),
+]
+@jitclass(spec)
+class NeuralNetwork:
+    def __init__(self, layer_sizes, layer_activations, weights, biases, layer_outputs, learning_rate):
+        self.layer_sizes = layer_sizes
+        self.layer_activations = layer_activations
+        self.weights = weights
+        self.biases = biases
+        self.layer_outputs = layer_outputs
+        self.learning_rate = learning_rate
+
 
 def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=-2, high=2):
+    for size in layer_sizes:
+        assert size > 0
 
     # Initialize typed layer sizes list.
     typed_layer_sizes = typed.List()
@@ -14,10 +39,10 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
     # print(typeof(typed_layer_sizes))
 
     # Initialie typed layer activation method strings list.
-    typed_layer_activations = typed.List()
+    prototype = types.FunctionType(types.float64[:, ::1](types.float64[:, ::1], types.boolean))
+    typed_layer_activations = typed.List.empty_list(prototype)
     for activation in layer_activations:
         typed_layer_activations.append(activation)
-    # print(typeof(typed_layer_activations))
 
     # Initialize weights between every neuron in all adjacent layers.
     typed_weights = typed.List()
@@ -38,49 +63,42 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
     # print(typeof(typed_layer_outputs))
 
     typed_learning_rate = learning_rate
-    return (typed_layer_sizes, typed_layer_activations, typed_weights, typed_biases, typed_layer_outputs, typed_learning_rate)
-
-# typed_layer_sizes = 0
-# typed_layer_activations = 1
-# typed_weights = 2
-# typed_biases = 3
-# typed_layer_outputs = 4
-# typed_learning_rate = 5
+    return NeuralNetwork(typed_layer_sizes, typed_layer_activations, typed_weights, typed_biases, typed_layer_outputs, typed_learning_rate)
 
 
 @njit
 def calculate_output(input_data, nn):
-    assert len(input_data) == nn[0][0]
+    assert len(input_data) == nn.layer_sizes[0]
     y = input_data
-    for i in prange(len(nn[2])):
-        y = h.activation(np.dot(nn[2][i].T, y) + nn[3][i], nn[1][i], False)
+    for i in prange(len(nn.weights)):
+        y = nn.layer_activations[i](np.dot(nn.weights[i].T, y) + nn.biases[i], False)
     return y
 
 
 @njit
 def feed_forward_layers(input_data, nn):
-    assert len(input_data) == nn[0][0]
-    nn[4][0] = input_data
-    for i in range(len(nn[2])):
-        nn[4][i+1] = h.activation(np.dot(nn[2][i].T, nn[4][i]) + nn[3][i], nn[1][i], False)
+    assert len(input_data) == nn.layer_sizes[0]
+    nn.layer_outputs[0] = input_data
+    for i in prange(len(nn.weights)):
+        nn.layer_outputs[i+1] = nn.layer_activations[i](np.dot(nn.weights[i].T, nn.layer_outputs[i]) + nn.biases[i], False)
 
 
 @njit
 def train_single(input_data, desired_output_data, nn):
-    assert len(input_data) == nn[0][0]
-    assert len(desired_output_data) == nn[0][-1]
+    assert len(input_data) == nn.layer_sizes[0]
+    assert len(desired_output_data) == nn.layer_sizes[-1]
     feed_forward_layers(input_data, nn)
 
-    error = (desired_output_data - nn[4][-1]) * h.activation(nn[4][-1], nn[1][-1], True)
-    nn[2][-1] += (nn[5] * nn[4][-2] * error.T)
-    nn[3][-1] += nn[5] * error
+    error = (desired_output_data - nn.layer_outputs[-1]) * nn.layer_activations[-1](nn.layer_outputs[-1], True)
+    nn.weights[-1] += nn.learning_rate * nn.layer_outputs[-2] * error.T
+    nn.biases[-1] += nn.learning_rate * error
 
-    length_weights = len(nn[2])
-    for i in range(1, length_weights):
+    length_weights = len(nn.weights)
+    for i in prange(1, length_weights):
         i = length_weights - i - 1
-        error = np.dot(nn[2][i+1], error) * h.activation(nn[4][i+1], nn[1][i], True)
-        nn[2][i] += (nn[5] * nn[4][i] * error.T)
-        nn[3][i] += nn[5] * error
+        error = np.dot(nn.weights[i+1], error) * nn.layer_activations[i](nn.layer_outputs[i+1], True)
+        nn.weights[i] += nn.learning_rate * nn.layer_outputs[i] * error.T
+        nn.biases[i] += nn.learning_rate * error
     return nn
 
 
@@ -135,5 +153,5 @@ def evaluate(input_data, desired_output_data, nn):
 
 @njit
 def print_weights_and_biases(nn):
-    print(nn[2])
-    print(nn[3])
+    print(nn.weights)
+    print(nn.biases)
