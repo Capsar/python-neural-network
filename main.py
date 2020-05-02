@@ -7,10 +7,13 @@ np.set_printoptions(linewidth=200)
 data_input = np.load("data/ci_inputs.npy")
 data_output = np.load("data/ci_outputs.npy")
 
+print(data_input.shape)
+print(data_output.shape)
+
 print("Begin compiling!")
 begin_time = time.time_ns()
 compiled_nn_values = nn.make_neural_network(layer_sizes=[data_input.shape[1], data_output.shape[1]], layer_activations=[h.softmax])
-nn.train_auto(data_input[:1], data_output[:1], data_input[1: 2], data_output[1: 2], compiled_nn_values)
+nn.train_auto(data_input[:100], data_output[:100], data_input[100: 140], data_output[100: 140], compiled_nn_values)
 end_time = time.time_ns()
 print("Compile time:", (end_time-begin_time) / 1e9)
 
