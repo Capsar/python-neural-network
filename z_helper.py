@@ -19,36 +19,6 @@ def kfold(k, data, seed=99):
     return data[fold_size*2:], data[:fold_size], data[fold_size:fold_size*2]
 
 
-@njit
-def np_func(npfunc, axis, arr):
-    assert arr.ndim == 2
-    assert axis in [0, 1]
-    if axis == 0:
-        result = np.empty(arr.shape[1])
-        for i in range(len(result)):
-            result[i] = npfunc(arr[:, i])
-    else:
-        result = np.empty(arr.shape[0])
-        for i in range(len(result)):
-            result[i] = npfunc(arr[i, :])
-    return result
-
-
-@njit
-def np_argmax(axis, arr):
-    return np_func(np.argmax, axis, arr)
-
-
-@njit
-def np_max(axis, arr):
-    return np_func(np.max, axis, arr)
-
-
-@njit
-def np_mean(axis, arr):
-    return np_func(np.mean, axis, arr)
-
-
 @njit('float64[:, ::1](float64[:, ::1], boolean)')
 def sigmoid(x, derivative):
     if derivative:

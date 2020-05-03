@@ -5,3 +5,7 @@ data/mnist_train.csv
 data/mnist_outputs.npy
 data/mnist_inputs.npy
 other/mlp.ipynb
+
+data/mnist_2_outputs.npy
+
+data/mnist_2_inputs.npy

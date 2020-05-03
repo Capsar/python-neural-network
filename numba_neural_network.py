@@ -70,7 +70,7 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
 def calculate_output(input_data, nn):
     assert len(input_data) == nn.layer_sizes[0]
     y = input_data
-    for i in prange(len(nn.weights)):
+    for i in range(len(nn.weights)):
         y = nn.layer_activations[i](np.dot(nn.weights[i].T, y) + nn.biases[i], False)
     return y
 
@@ -79,7 +79,7 @@ def calculate_output(input_data, nn):
 def feed_forward_layers(input_data, nn):
     assert len(input_data) == nn.layer_sizes[0]
     nn.layer_outputs[0] = input_data
-    for i in prange(len(nn.weights)):
+    for i in range(len(nn.weights)):
         nn.layer_outputs[i+1] = nn.layer_activations[i](np.dot(nn.weights[i].T, nn.layer_outputs[i]) + nn.biases[i], False)
 
 
@@ -94,8 +94,8 @@ def train_single(input_data, desired_output_data, nn):
     nn.biases[-1] += nn.learning_rate * error
 
     length_weights = len(nn.weights)
-    for i in prange(1, length_weights):
-        i = length_weights - i - 1
+    for p in range(1, length_weights):
+        i = length_weights - p - 1
         error = np.dot(nn.weights[i+1], error) * nn.layer_activations[i](nn.layer_outputs[i+1], True)
         nn.weights[i] += nn.learning_rate * nn.layer_outputs[i] * error.T
         nn.biases[i] += nn.learning_rate * error
@@ -124,11 +124,11 @@ def train_epoch(train_input_data, train_desired_output_data, validate_input_data
 
 
 @njit
-def train_auto(train_input_data, train_desired_output_data, validate_input_data, validate_output_data, nn):
+def train_auto(train_input_data, train_desired_output_data, validate_input_data, validate_output_data, max_epochs, nn):
     previous_mse = 1.0
     current_mse = 0.0
     epochs = 0
-    while(current_mse < previous_mse):
+    while(current_mse < previous_mse and epochs < max_epochs):
         epochs += 1
         previous_mse = calculate_MSE(validate_input_data, validate_output_data, nn)
         for i in range(len(train_input_data)):
