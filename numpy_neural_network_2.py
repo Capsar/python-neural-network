@@ -37,7 +37,6 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
     for size in layer_sizes:
         typed_layer_sizes.append(size)
     # print(typeof(typed_layer_sizes))
-    # typed_layer_sizes = layer_sizes
 
     # Initialie typed layer activation method strings list.
     prototype = types.FunctionType(types.float64[:, ::1](types.float64[:, ::1], types.boolean))
@@ -45,27 +44,29 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
     for activation in layer_activations:
         typed_layer_activations.append(activation)
     # print(typeof(typed_layer_activations))
-    # typed_layer_activations = layer_activations
 
     # Initialize weights between every neuron in all adjacent layers.
     typed_weights = typed.List()
     for i in range(1, len(layer_sizes)):
         typed_weights.append(np.random.uniform(low, high, (layer_sizes[i-1], layer_sizes[i])))
     # print(typeof(typed_weights))
-    # typed_weights = [np.random.uniform(low, high, (layer_sizes[i-1], layer_sizes[i])) for i in range(1, len(layer_sizes))]
 
     # Initialize biases for every neuron in all layers
     typed_biases = typed.List()
     for i in range(1, len(layer_sizes)):
         typed_biases.append(np.random.uniform(low, high, (layer_sizes[i],)))
     # print(typeof(typed_biases))
-    # typed_biases = [np.random.uniform(low, high, (layer_sizes[i],)) for i in range(1, len(layer_sizes))]
 
     # Initialize empty list of output of every neuron in all layers.
     typed_layer_outputs = typed.List()
     for i in range(len(layer_sizes)):
         typed_layer_outputs.append(np.zeros((layer_sizes[i], 1)))
     # print(typeof(typed_layer_outputs))
+
+    # typed_layer_sizes = layer_sizes
+    # typed_layer_activations = layer_activations
+    # typed_weights = [np.random.uniform(low, high, (layer_sizes[i-1], layer_sizes[i])) for i in range(1, len(layer_sizes))]
+    # typed_biases = [np.random.uniform(low, high, (layer_sizes[i],)) for i in range(1, len(layer_sizes))]
     # typed_layer_outputs = [np.zeros((layer_sizes[i],1)) for i in range(len(layer_sizes))]
 
     typed_learning_rate = learning_rate
@@ -96,7 +97,11 @@ def train_batch(input_data, desired_output_data, nn):
 
     temp_weights = typed.List()
     temp_biases = typed.List()
+    # temp_weights = []
+    # temp_biases = []
 
+    # nn.weights[-1] += nn.learning_rate * np.dot(nn.layer_outputs[-2].T, error) / input_data.shape[0]
+    # nn.biases[-1] += nn.learning_rate * h.np_mean(0, error)
     temp_weights.insert(0, nn.weights[-1] + nn.learning_rate * np.dot(nn.layer_outputs[-2].T, error) / input_data.shape[0])
     temp_biases.insert(0, nn.biases[-1] + nn.learning_rate * h.np_mean(0, error))
 
@@ -104,6 +109,8 @@ def train_batch(input_data, desired_output_data, nn):
     for i in range(1, length_weights):
         i = length_weights - i - 1
         error = np.dot(error, nn.weights[i+1].T) * nn.layer_activations[i](nn.layer_outputs[i+1], True)
+        # nn.weights[i] += nn.learning_rate * np.dot(nn.layer_outputs[i].T, error) / input_data.shape[0]
+        # nn.biases[i] += nn.learning_rate * h.np_mean(0, error)
         temp_weights.insert(0, nn.weights[i] + nn.learning_rate * np.dot(nn.layer_outputs[i].T, error) / input_data.shape[0])
         temp_biases.insert(0, nn.biases[i] + nn.learning_rate * h.np_mean(0, error))
 
@@ -123,12 +130,13 @@ def train_auto(train_input_data, train_desired_output_data, validate_input_data,
     previous_mse = 1.0
     current_mse = 0.0
     epochs = 0
-    batch_size = train_input_data.shape[0] 
+    batch_size = 8
     while(current_mse < previous_mse):
+    # while(epochs < 40):
         epochs += 1
         previous_mse = calculate_MSE(validate_input_data, validate_output_data, nn)
         b, e = 0, batch_size
-        while(e + batch_size < len(train_input_data) + 1):
+        while(e + batch_size <= len(train_input_data)):
             train_batch(train_input_data[b:e], train_desired_output_data[b:e], nn)
             b += batch_size
             e += batch_size
@@ -145,7 +153,7 @@ def evaluate(input_data, desired_output_data, nn):
     return correct / input_data.shape[0]
 
 
-# @njit
+@njit
 def print_weights_and_biases(nn):
     weights = np.clip(nn.weights[0], 0.001, 0.999)
     biases = np.clip(nn.biases[0], 0.001, 0.999)

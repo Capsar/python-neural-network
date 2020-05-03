@@ -49,7 +49,7 @@ def np_mean(axis, arr):
     return np_func(np.mean, axis, arr)
 
 
-# @njit('float64[:, ::1](float64[:, ::1], boolean)')
+@njit('float64[:, ::1](float64[:, ::1], boolean)')
 def sigmoid(x, derivative):
     if derivative:
         return x * (1.0 - x)
@@ -57,7 +57,7 @@ def sigmoid(x, derivative):
         return 1.0 / (1.0 + np.exp(-x))
 
 
-# @njit('float64[:, ::1](float64[:, ::1], boolean)')
+@njit('float64[:, ::1](float64[:, ::1], boolean)')
 def relu(x, derivative):
     if derivative:
         return np.where(x <= 0.0, 0.0, 1.0)
@@ -65,7 +65,7 @@ def relu(x, derivative):
         return np.maximum(0.0, x)
 
 
-# @njit('float64[:, ::1](float64[:, ::1], boolean)')
+@njit('float64[:, ::1](float64[:, ::1], boolean)')
 def leaky_relu(x, derivative):
     if derivative:
         return np.where(x <= 0.0, -0.01*x, 1.0)
@@ -73,15 +73,8 @@ def leaky_relu(x, derivative):
         return np.maximum(-0.01*x, x)
 
 
-# @njit('float64[:, ::1](float64[:, ::1], boolean)')
+@njit('float64[:, ::1](float64[:, ::1], boolean)')
 def softmax(x, derivative):
     e_x = np.exp(x - np.max(x))
     result = e_x / e_x.sum()
     return result
-
-
-# @njit('float64[:, ::1](float64[:, ::1], boolean)')
-def softmax_2(x, derivative):
-    tmp = x - np_max(1, x).reshape(-1, 1)
-    exp_tmp = np.exp(tmp)
-    return exp_tmp / exp_tmp.sum(axis=1).reshape(-1, 1)

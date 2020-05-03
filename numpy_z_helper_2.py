@@ -36,16 +36,19 @@ def np_func(npfunc, axis, arr):
 
 @njit
 def np_argmax(axis, arr):
+    # return arr.argmax(axis=axis)
     return np_func(np.argmax, axis, arr)
 
 
 @njit
 def np_max(axis, arr):
+    # return arr.max(axis=axis)
     return np_func(np.max, axis, arr)
 
 
 @njit
 def np_mean(axis, arr):
+    # return arr.mean(axis=axis)
     return np_func(np.mean, axis, arr)
 
 

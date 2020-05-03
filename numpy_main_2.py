@@ -20,7 +20,7 @@ print("Compile time:", (end_time-begin_time) / 1e9)
 np.random.seed(420)
 total_accuracy = 0.0
 begin_total = time.time_ns()
-n = 10
+n = 3
 for i in range(n):
 
     random_seed = np.random.randint(10, 1010)
