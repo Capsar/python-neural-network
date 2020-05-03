@@ -9,11 +9,13 @@ import warnings
 
 warnings.simplefilter('ignore', category=NumbaTypeSafetyWarning)
 
+weights_type = types.float64[:, ::1]
+biases_type = types.float64[::1]
 spec = [
     ("layer_sizes", types.ListType(types.int64)),
     ("layer_activations", types.ListType(types.FunctionType(types.float64[:, ::1](types.float64[:, ::1], types.boolean)))),
-    ("weights", types.ListType(types.float64[:, ::1])),
-    ("biases", types.ListType(types.float64[::1])),
+    ("weights", types.ListType(weights_type)),
+    ("biases", types.ListType(biases_type)),
     ("layer_outputs", types.ListType(types.float64[:, ::1])),
     ("learning_rate", types.float64),
 ]
@@ -36,41 +38,44 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
     typed_layer_sizes = typed.List()
     for size in layer_sizes:
         typed_layer_sizes.append(size)
-    # print(typeof(typed_layer_sizes))
 
     # Initialie typed layer activation method strings list.
     prototype = types.FunctionType(types.float64[:, ::1](types.float64[:, ::1], types.boolean))
     typed_layer_activations = typed.List.empty_list(prototype)
     for activation in layer_activations:
         typed_layer_activations.append(activation)
-    # print(typeof(typed_layer_activations))
 
     # Initialize weights between every neuron in all adjacent layers.
     typed_weights = typed.List()
     for i in range(1, len(layer_sizes)):
         typed_weights.append(np.random.uniform(low, high, (layer_sizes[i-1], layer_sizes[i])))
-    # print(typeof(typed_weights))
 
     # Initialize biases for every neuron in all layers
     typed_biases = typed.List()
     for i in range(1, len(layer_sizes)):
         typed_biases.append(np.random.uniform(low, high, (layer_sizes[i],)))
-    # print(typeof(typed_biases))
 
     # Initialize empty list of output of every neuron in all layers.
     typed_layer_outputs = typed.List()
     for i in range(len(layer_sizes)):
         typed_layer_outputs.append(np.zeros((layer_sizes[i], 1)))
-    # print(typeof(typed_layer_outputs))
-
-    # typed_layer_sizes = layer_sizes
-    # typed_layer_activations = layer_activations
-    # typed_weights = [np.random.uniform(low, high, (layer_sizes[i-1], layer_sizes[i])) for i in range(1, len(layer_sizes))]
-    # typed_biases = [np.random.uniform(low, high, (layer_sizes[i],)) for i in range(1, len(layer_sizes))]
-    # typed_layer_outputs = [np.zeros((layer_sizes[i],1)) for i in range(len(layer_sizes))]
 
     typed_learning_rate = learning_rate
     return NeuralNetwork(typed_layer_sizes, typed_layer_activations, typed_weights, typed_biases, typed_layer_outputs, typed_learning_rate)
+
+
+@njit
+def update_parameters(weights, biases, nn):
+    # temp_weights = typed.List()
+    # temp_biases = typed.List()
+    # for i in range(len(weights)):
+    #     temp_weights.append(weights[i])
+    #     temp_biases.append(biases[i])
+    # nn.weights = temp_weights
+    # nn.biases = temp_biases
+
+    nn.weights = weights
+    nn.biases = biases
 
 
 @njit
@@ -91,53 +96,51 @@ def feed_forward_layers(input_data, nn):
 
 
 @njit
-def train_batch(input_data, desired_output_data, nn):
-    feed_forward_layers(input_data, nn)
-    error = (desired_output_data - nn.layer_outputs[-1]) * nn.layer_activations[-1](nn.layer_outputs[-1], True)
-
-    temp_weights = typed.List()
-    temp_biases = typed.List()
-    # temp_weights = []
-    # temp_biases = []
-
-    # nn.weights[-1] += nn.learning_rate * np.dot(nn.layer_outputs[-2].T, error) / input_data.shape[0]
-    # nn.biases[-1] += nn.learning_rate * h.np_mean(0, error)
-    temp_weights.insert(0, nn.weights[-1] + nn.learning_rate * np.dot(nn.layer_outputs[-2].T, error) / input_data.shape[0])
-    temp_biases.insert(0, nn.biases[-1] + nn.learning_rate * h.np_mean(0, error))
+def propogate_back(input_data, desired_output_data, nn):
 
     length_weights = len(nn.weights)
-    for i in range(1, length_weights):
-        i = length_weights - i - 1
+    temp_weights = typed.List.empty_list(item_type=weights_type)
+    temp_biases = typed.List.empty_list(item_type=biases_type)
+    # temp_weights = typed.Dict.empty(key_type=types.int64, value_type=weights_type)
+    # temp_biases = typed.Dict.empty(key_type=types.int64, value_type=biases_type)
+
+    error = (desired_output_data - nn.layer_outputs[-1]) * nn.layer_activations[-1](nn.layer_outputs[-1], True)
+    temp_weights.insert(0, nn.weights[-1] + nn.learning_rate * np.dot(nn.layer_outputs[-2].T, error) / input_data.shape[0])
+    temp_biases.insert(0, nn.biases[-1] + nn.learning_rate * h.np_mean(0, error))
+    # temp_weights[length_weights - 1] = nn.weights[-1] + nn.learning_rate * np.dot(nn.layer_outputs[-2].T, error) / input_data.shape[0]
+    # temp_biases[length_weights - 1] = nn.biases[-1] + nn.learning_rate * h.np_mean(0, error)
+
+    for p in range(1, length_weights):
+        i = length_weights - p - 1
         error = np.dot(error, nn.weights[i+1].T) * nn.layer_activations[i](nn.layer_outputs[i+1], True)
-        # nn.weights[i] += nn.learning_rate * np.dot(nn.layer_outputs[i].T, error) / input_data.shape[0]
-        # nn.biases[i] += nn.learning_rate * h.np_mean(0, error)
         temp_weights.insert(0, nn.weights[i] + nn.learning_rate * np.dot(nn.layer_outputs[i].T, error) / input_data.shape[0])
         temp_biases.insert(0, nn.biases[i] + nn.learning_rate * h.np_mean(0, error))
+        # temp_weights[i] = nn.weights[i] + nn.learning_rate * np.dot(nn.layer_outputs[i].T, error) / input_data.shape[0]
+        # temp_biases[i] = nn.biases[i] + nn.learning_rate * h.np_mean(0, error)
 
-    nn.weights = temp_weights
-    nn.biases = temp_biases
+    return temp_weights, temp_biases
 
 
 @njit(parallel=True)
 def calculate_MSE(input_data, desired_output_data, nn):
     assert input_data.shape[0] == desired_output_data.shape[0]
     sum_error = np.sum(np.power(desired_output_data - calculate_output(input_data, nn), 2))
-    return sum_error / len(input_data)
+    return sum_error / input_data.shape[0]
 
 
 @njit
-def train_auto(train_input_data, train_desired_output_data, validate_input_data, validate_output_data, nn):
+def train_auto(train_input_data, train_desired_output_data, validate_input_data, validate_output_data, batch_size, max_epochs, nn):
     previous_mse = 1.0
     current_mse = 0.0
     epochs = 0
-    batch_size = 8
-    while(current_mse < previous_mse):
-    # while(epochs < 40):
+    while(current_mse < previous_mse and epochs < max_epochs):
         epochs += 1
         previous_mse = calculate_MSE(validate_input_data, validate_output_data, nn)
         b, e = 0, batch_size
-        while(e + batch_size <= len(train_input_data)):
-            train_batch(train_input_data[b:e], train_desired_output_data[b:e], nn)
+        while(e <= len(train_input_data)):
+            feed_forward_layers(train_input_data[b:e], nn)
+            temp_weights, temp_biases = propogate_back(train_input_data[b:e], train_desired_output_data[b:e], nn)
+            update_parameters(temp_weights, temp_biases, nn)
             b += batch_size
             e += batch_size
         current_mse = calculate_MSE(validate_input_data, validate_output_data, nn)

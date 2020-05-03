@@ -15,13 +15,13 @@ def prepare_mnist_data():
 
     data_output = np.array([h.class_to_array(np.amax(data_output), x) for x in data_output])
     print(6)
-    data_input = data_input.reshape((len(data_input), -1, 1))
-    print(7)
-    data_output = data_output.reshape((len(data_output), -1, 1))
-    print(8)
+    # data_input = data_input.reshape((len(data_input), -1, 1))
+    # print(7)
+    # data_output = data_output.reshape((len(data_output), -1, 1))
+    # print(8)
 
-    np.save("data/mnist_inputs", data_input)
-    np.save("data/mnist_outputs", data_output)
+    np.save("data/mnist_2_inputs", data_input)
+    np.save("data/mnist_2_outputs", data_output)
 
 
 def prepare_ci_data():
@@ -38,4 +38,4 @@ def prepare_ci_data():
     np.save("data/ci_2_inputs", data_input)
     np.save("data/ci_2_outputs", data_output)
 
-prepare_ci_data()
+prepare_mnist_data()

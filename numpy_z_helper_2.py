@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit, typeof
+from numba import njit
 
 
 def import_from_csv(path, data_type):
@@ -50,7 +50,6 @@ def np_max(axis, arr):
 def np_mean(axis, arr):
     # return arr.mean(axis=axis)
     return np_func(np.mean, axis, arr)
-
 
 @njit('float64[:, ::1](float64[:, ::1], boolean)')
 def sigmoid(x, derivative):
