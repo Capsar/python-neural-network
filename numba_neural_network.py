@@ -8,6 +8,7 @@ from numba.core.errors import NumbaTypeSafetyWarning
 import warnings
 
 warnings.simplefilter('ignore', category=NumbaTypeSafetyWarning)
+DELTA = 1e-7
 
 spec = [
     ("layer_sizes", types.ListType(types.int64)),
@@ -16,19 +17,30 @@ spec = [
     ("biases", types.ListType(types.float64[:, ::1])),
     ("layer_outputs", types.ListType(types.float64[:, ::1])),
     ("learning_rate", types.float64),
+    ("rho", types.float64),
+    ("r_accum", types.ListType(types.float64[:, ::1])),
+    ("velocity", types.ListType(types.float64[:, ::1])),
+    ("alpha", types.float64),
+    ("theta_hat", types.ListType(types.float64[:, ::1])),
 ]
 @jitclass(spec)
 class NeuralNetwork:
-    def __init__(self, layer_sizes, layer_activations, weights, biases, layer_outputs, learning_rate):
+    def __init__(self, layer_sizes, layer_activations, weights, biases, layer_outputs, 
+                 learning_rate, rho, r_accum, velocity, alpha, theta_hat):
         self.layer_sizes = layer_sizes
         self.layer_activations = layer_activations
         self.weights = weights
         self.biases = biases
         self.layer_outputs = layer_outputs
         self.learning_rate = learning_rate
+        self.rho = rho
+        self.r_accum = r_accum
+        self.velocity = velocity
+        self.alpha = alpha
+        self.theta_hat = theta_hat
 
-
-def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=-2, high=2):
+#                                            changed learning from 0.05    
+def make_neural_network(layer_sizes, layer_activations, learning_rate=0.001, low=-2, high=2, rho = 0.9, alpha = 0.9):
     for size in layer_sizes:
         assert size > 0
 
@@ -63,7 +75,26 @@ def make_neural_network(layer_sizes, layer_activations, learning_rate=0.05, low=
     # print(typeof(typed_layer_outputs))
 
     typed_learning_rate = learning_rate
-    return NeuralNetwork(typed_layer_sizes, typed_layer_activations, typed_weights, typed_biases, typed_layer_outputs, typed_learning_rate)
+    typed_rho = rho
+        
+    # Initialize empty list of the accumulation variable r.
+    typed_r_accum = typed.List()
+    for i in range(1, len(layer_sizes)):
+        typed_r_accum.append(np.zeros((layer_sizes[i-1], layer_sizes[i])))
+    
+    # Initialize empty list of the velocity variable
+    typed_velocity = typed.List()
+    for i in range(1, len(layer_sizes)):
+        typed_velocity.append(np.zeros((layer_sizes[i-1], layer_sizes[i])))
+    
+    typed_alpha = alpha
+    
+    typed_theta_hat = typed_weights
+        
+    return NeuralNetwork(typed_layer_sizes, typed_layer_activations, typed_weights,
+                         typed_biases, typed_layer_outputs, typed_learning_rate,
+                         typed_rho, typed_r_accum, typed_velocity, typed_alpha,
+                         typed_theta_hat)
 
 
 @njit
@@ -87,18 +118,45 @@ def feed_forward_layers(input_data, nn):
 def train_single(input_data, desired_output_data, nn):
     assert len(input_data) == nn.layer_sizes[0]
     assert len(desired_output_data) == nn.layer_sizes[-1]
+    length_weights = len(nn.weights)
+    
+    # Nesterov momentum - adjust the parameters first
+    for i in prange(length_weights):
+        nn.weights[i] += nn.alpha * nn.velocity[i]
+        
+    # Feed forward pass
     feed_forward_layers(input_data, nn)
 
     error = (desired_output_data - nn.layer_outputs[-1]) * nn.layer_activations[-1](nn.layer_outputs[-1], True)
-    nn.weights[-1] += nn.learning_rate * nn.layer_outputs[-2] * error.T
+    
+    # Calculate the gradient
+    g = nn.layer_outputs[-2] * error.T
+    
+    # Update the accumulation variable
+    nn.r_accum[-1] = nn.rho * nn.r_accum[-1] + (1 - nn.rho) * g ** 2
+    
+    # Compute the velocit update
+    nn.velocity[-1] = nn.alpha * nn.velocity[-1] + nn.learning_rate/np.sqrt(DELTA + nn.r_accum[-1]) * g
+    
+    nn.weights[-1] = nn.theta_hat[-1] + nn.velocity[-1]
     nn.biases[-1] += nn.learning_rate * error
 
-    length_weights = len(nn.weights)
     for i in prange(1, length_weights):
         i = length_weights - i - 1
+
         error = np.dot(nn.weights[i+1], error) * nn.layer_activations[i](nn.layer_outputs[i+1], True)
-        nn.weights[i] += nn.learning_rate * nn.layer_outputs[i] * error.T
+        g =  nn.layer_outputs[i] * error.T
+        
+        # Update the accumulation variable
+        nn.r_accum[i] = nn.rho * nn.r_accum[i] + (1 - nn.rho) * g ** 2
+        
+        # Compute the velocit update
+        nn.velocity[i] = nn.alpha * nn.velocity[i] + nn.learning_rate/np.sqrt(DELTA + nn.r_accum[i]) * g
+        
+        nn.weights[i] = nn.theta_hat[i] + nn.velocity[i]
         nn.biases[i] += nn.learning_rate * error
+    
+    nn.theta_hat = nn.weights
     return nn
 
 
@@ -129,6 +187,7 @@ def train_auto(train_input_data, train_desired_output_data, validate_input_data,
     current_mse = 0.0
     epochs = 0
     while(current_mse < previous_mse):
+    #    print(nn.weights, '\n')
         epochs += 1
         previous_mse = calculate_MSE(validate_input_data, validate_output_data, nn)
         for i in range(len(train_input_data)):
